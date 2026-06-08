@@ -259,6 +259,12 @@ textarea{
   gap:10px;
 }
 
+.mobile-list-toggle,
+.list-more-btn{
+  width:100%;
+  justify-content:center;
+}
+
 .restaurant-list{
   overflow:auto;
   display:flex;
@@ -445,5 +451,21 @@ textarea{
 
   .card-head{
     flex-direction:column;
+  }
+
+  .list-panel{
+    gap:10px;
+  }
+
+  .restaurant-list{
+    max-height:min(52vh,360px);
+    padding-right:0;
+  }
+}
+
+@media (min-width: 641px){
+  .mobile-list-toggle,
+  .list-more-btn{
+    display:none;
   }
 }

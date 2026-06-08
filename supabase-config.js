@@ -82,6 +82,28 @@
     });
   }
 
+  function parseCoordinate(value,label,min,max){
+    const trimmed = String(value ?? "").trim();
+    if(!trimmed){
+      throw new Error(`${label} is required.`);
+    }
+    const parsed = Number(trimmed);
+    if(!Number.isFinite(parsed)){
+      throw new Error(`${label} must be a valid decimal number.`);
+    }
+    if(parsed < min || parsed > max){
+      throw new Error(`${label} must be between ${min} and ${max}.`);
+    }
+    return parsed;
+  }
+
+  function coordinateKey(value){
+    const parsed = Number(value);
+    return Number.isFinite(parsed)
+      ? parsed.toFixed(10).replace(/\.?0+$/,"")
+      : "";
+  }
+
   async function fetchRestaurants(client){
     const {data,error} = await client
       .from(TABLES.restaurants)
@@ -97,8 +119,8 @@
     return {
       name_local:String(formState.name || "").trim(),
       name_en:String(formState.en || "").trim(),
-      lat:Number(formState.lat),
-      lng:Number(formState.lng),
+      lat:parseCoordinate(formState.lat,"Latitude",-90,90),
+      lng:parseCoordinate(formState.lng,"Longitude",-180,180),
       categories:Array.isArray(formState.cat) ? formState.cat : [],
       description:String(formState.desc || "").trim(),
       maps_url:String(formState.url || "").trim(),
@@ -114,8 +136,8 @@
       String(place.url || "").trim().toLowerCase(),
       String(place.name || "").trim().toLowerCase(),
       String(place.en || "").trim().toLowerCase(),
-      Number(place.lat).toFixed(6),
-      Number(place.lng).toFixed(6)
+      coordinateKey(place.lat),
+      coordinateKey(place.lng)
     ].join("|");
   }
 
@@ -130,6 +152,7 @@
     createClient,
     fetchRestaurants,
     normalizeRestaurantRows,
+    parseCoordinate,
     toRestaurantPayload,
     makeMatchKey
   };

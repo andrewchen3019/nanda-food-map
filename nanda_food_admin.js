@@ -14,6 +14,8 @@ const refs = {
   searchInput:document.getElementById("search-input"),
   restaurantCount:document.getElementById("restaurant-count"),
   restaurantList:document.getElementById("restaurant-list"),
+  toggleRestaurantListBtn:document.getElementById("toggle-restaurant-list-btn"),
+  showMoreRestaurantsBtn:document.getElementById("show-more-restaurants-btn"),
   restaurantForm:document.getElementById("restaurant-form"),
   editorTitle:document.getElementById("editor-title"),
   deleteRestaurantBtn:document.getElementById("delete-restaurant-btn"),
@@ -31,16 +33,23 @@ const refs = {
   photoUrlSortInput:document.getElementById("photo-url-sort-input")
 };
 
+const MOBILE_LIST_MEDIA = window.matchMedia("(max-width: 640px)");
+const MOBILE_LIST_BATCH_SIZE = 8;
+
 const state = {
   client:null,
   session:null,
   restaurants:[],
   selectedId:null,
   search:"",
-  busy:false
+  busy:false,
+  mobileLayout:MOBILE_LIST_MEDIA.matches,
+  mobileListOpen:!MOBILE_LIST_MEDIA.matches,
+  visibleRestaurantCount:MOBILE_LIST_MEDIA.matches ? MOBILE_LIST_BATCH_SIZE : Number.POSITIVE_INFINITY
 };
 
 init();
+setupResponsiveList();
 
 refs.loginForm.addEventListener("submit",handleLogin);
 refs.logoutBtn.addEventListener("click",handleLogout);
@@ -49,8 +58,14 @@ refs.newRestaurantBtn.addEventListener("click",() => selectRestaurant(null));
 refs.importJsonBtn.addEventListener("click",importFromJsonSnapshot);
 refs.searchInput.addEventListener("input",event => {
   state.search = event.target.value.trim().toLowerCase();
+  if(state.mobileLayout){
+    state.mobileListOpen = true;
+    state.visibleRestaurantCount = MOBILE_LIST_BATCH_SIZE;
+  }
   renderRestaurantList();
 });
+refs.toggleRestaurantListBtn.addEventListener("click",toggleRestaurantList);
+refs.showMoreRestaurantsBtn.addEventListener("click",showMoreRestaurants);
 refs.restaurantForm.addEventListener("submit",saveRestaurant);
 refs.deleteRestaurantBtn.addEventListener("click",deleteRestaurant);
 refs.resetFormBtn.addEventListener("click",() => selectRestaurant(null));
@@ -162,6 +177,16 @@ function setBanner(text,tone){
   refs.banner.className = `status-banner ${tone}`;
 }
 
+function setupResponsiveList(){
+  MOBILE_LIST_MEDIA.addEventListener("change",event => {
+    state.mobileLayout = event.matches;
+    state.mobileListOpen = event.matches ? Boolean(state.search) : true;
+    state.visibleRestaurantCount = event.matches ? MOBILE_LIST_BATCH_SIZE : Number.POSITIVE_INFINITY;
+    renderRestaurantList();
+  });
+  updateRestaurantListControls(getFilteredRestaurants().length);
+}
+
 function getFilteredRestaurants(){
   if(!state.search) return state.restaurants;
   return state.restaurants.filter(place => {
@@ -176,15 +201,43 @@ function getFilteredRestaurants(){
   });
 }
 
+function updateRestaurantListControls(totalCount){
+  const isMobile = state.mobileLayout;
+  const shownCount = isMobile ? Math.min(state.visibleRestaurantCount,totalCount) : totalCount;
+  refs.toggleRestaurantListBtn.classList.toggle("hidden",!isMobile);
+  refs.toggleRestaurantListBtn.textContent = state.mobileListOpen
+    ? `Hide restaurant list (${totalCount})`
+    : `Browse restaurants (${totalCount})`;
+  refs.toggleRestaurantListBtn.setAttribute("aria-expanded",String(!isMobile || state.mobileListOpen));
+  refs.restaurantList.classList.toggle("hidden",isMobile && !state.mobileListOpen);
+
+  const canShowMore = isMobile && state.mobileListOpen && shownCount < totalCount;
+  refs.showMoreRestaurantsBtn.classList.toggle("hidden",!canShowMore);
+  if(canShowMore){
+    const nextBatch = Math.min(MOBILE_LIST_BATCH_SIZE,totalCount - shownCount);
+    refs.showMoreRestaurantsBtn.textContent = `Show ${nextBatch} more`;
+  }
+}
+
 function renderRestaurantList(){
   const filtered = getFilteredRestaurants();
-  refs.restaurantCount.textContent = `${filtered.length} loaded`;
+  const visibleCount = state.mobileLayout
+    ? Math.min(state.visibleRestaurantCount,filtered.length)
+    : filtered.length;
+  refs.restaurantCount.textContent = state.mobileLayout && filtered.length > visibleCount
+    ? `Showing ${visibleCount} of ${filtered.length}`
+    : `${filtered.length} loaded`;
+  updateRestaurantListControls(filtered.length);
   if(!filtered.length){
     refs.restaurantList.innerHTML = '<div class="empty-note">No restaurants match the current search.</div>';
     return;
   }
 
-  refs.restaurantList.innerHTML = filtered.map(place => `
+  const visibleRestaurants = state.mobileLayout
+    ? filtered.slice(0,state.visibleRestaurantCount)
+    : filtered;
+
+  refs.restaurantList.innerHTML = visibleRestaurants.map(place => `
     <button type="button" class="restaurant-item ${state.selectedId === place.id ? "selected" : ""}" data-restaurant-id="${place.id}">
       <strong>${escapeHtml(place.en || place.name)}</strong>
       <span>${escapeHtml(place.name)}</span>
@@ -244,8 +297,23 @@ function renderPhotoList(place){
 
 function selectRestaurant(id){
   state.selectedId = id;
+  if(state.mobileLayout && id){
+    state.mobileListOpen = false;
+    state.visibleRestaurantCount = MOBILE_LIST_BATCH_SIZE;
+  }
   renderRestaurantList();
   renderEditor();
+}
+
+function toggleRestaurantList(){
+  state.mobileListOpen = !state.mobileListOpen;
+  renderRestaurantList();
+}
+
+function showMoreRestaurants(){
+  state.mobileListOpen = true;
+  state.visibleRestaurantCount += MOBILE_LIST_BATCH_SIZE;
+  renderRestaurantList();
 }
 
 function resetRestaurantForm(){
