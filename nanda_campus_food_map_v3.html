@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nanda Campus Food Map</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="nanda_campus_food_map_v3.css"/>
+</head>
+<body>
+
+<h2 class="sr-only">Interactive food map showing restaurants near NTHU Nanda Campus with clearer markers, current location focus, recommended and new groups, and static photo placeholders.</h2>
+
+<div class="map-app">
+  <aside class="sidebar">
+    <div class="hero">
+      <div class="eyebrow">Campus Food Guide</div>
+      <h2>Nanda food map, now backed by Supabase.</h2>
+      <p>The map reads restaurant data from Supabase. Use the admin page to add places, mark visits, and upload photos from your phone after you sign in.</p>
+    </div>
+
+    <div class="stat-row" id="stats"></div>
+
+    <div class="control-card">
+      <div>
+        <div class="section-label">Search</div>
+        <div class="search-wrap">
+          <input id="search-input" type="search" placeholder="Search by name, meal, or description" aria-label="Search restaurants">
+        </div>
+      </div>
+
+      <div>
+        <div class="section-label">Meal Type</div>
+        <div id="category-controls" class="chip-row">
+          <button class="chip-btn active" data-cat="all">All</button>
+          <button class="chip-btn" data-cat="breakfast">Breakfast</button>
+          <button class="chip-btn" data-cat="brunch">Brunch</button>
+          <button class="chip-btn" data-cat="lunch">Lunch</button>
+          <button class="chip-btn" data-cat="dinner">Dinner</button>
+          <button class="chip-btn" data-cat="hotpot">Hotpot / BBQ</button>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-label">Place Type</div>
+        <div id="group-controls" class="chip-row">
+          <button class="chip-btn active" data-group="all">All</button>
+          <button class="chip-btn" data-group="recommended">Recommended</button>
+          <button class="chip-btn" data-group="new">New</button>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-label">Visit Status</div>
+        <div id="visit-controls" class="chip-row">
+          <button class="chip-btn active" data-visit="all">All Places</button>
+          <button class="chip-btn" data-visit="visited">Visited</button>
+          <button class="chip-btn" data-visit="unvisited">Not Yet</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="detail-card" id="detail-card"></div>
+
+    <div class="list-panel">
+      <div class="list-header">
+        <div>
+          <strong id="list-title">Places</strong>
+          <span id="count">Showing 0 places</span>
+        </div>
+        <span id="list-subcopy">Click a card to focus the map</span>
+      </div>
+      <div id="place-list" class="place-list"></div>
+    </div>
+  </aside>
+
+  <section class="map-stage">
+    <div class="map-topbar">
+      <div>
+        <strong>NTHU Nanda Campus Food Map</strong>
+        <span id="summary-text">Showing all places.</span>
+      </div>
+      <div class="map-actions">
+        <a class="fit-btn admin-link" href="nanda_food_admin.html">Open admin</a>
+        <button class="fit-btn" id="locate-btn" type="button">Use my location</button>
+        <button class="fit-btn" id="fit-results-btn" type="button">Fit results</button>
+      </div>
+    </div>
+
+    <div id="map-wrap"><div id="map"></div></div>
+
+    <div class="legend">
+      <div class="leg-item"><div style="width:14px;height:14px;background:#0F6E56;border-radius:4px;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.3)"></div>Nanda Campus</div>
+      <div class="leg-item"><div class="leg-pin recommended"></div>Recommended outline</div>
+      <div class="leg-item"><div class="leg-pin new"></div>New outline</div>
+      <div class="leg-item"><div class="leg-pin recommended"></div>Visited</div>
+      <div class="leg-item"><div class="leg-pin recommended faded"></div>Not visited</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#BA7517"></div>Breakfast</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#D85A30"></div>Brunch</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#185FA5"></div>Lunch</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#533AB7"></div>Dinner</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#A32D2D"></div>Hotpot / BBQ</div>
+      <div class="legend-note">Pins use meal colors. The outline shows whether a place is recommended or new, and opacity shows visited status: solid means visited, faded means not visited.</div>
+    </div>
+  </section>
+</div>
+
+<div id="image-modal" class="image-modal" aria-hidden="true">
+  <div class="image-modal-backdrop" data-close-image-modal onclick="document.getElementById('image-modal').classList.remove('open');document.getElementById('image-modal').setAttribute('aria-hidden','true');document.getElementById('image-modal-img').src='';document.getElementById('image-modal-img').alt='';document.getElementById('image-modal-caption').textContent='';"></div>
+  <div class="image-modal-content" role="dialog" aria-modal="true" aria-label="Image preview">
+    <button class="image-modal-close" type="button" data-close-image-modal aria-label="Close image preview" onclick="document.getElementById('image-modal').classList.remove('open');document.getElementById('image-modal').setAttribute('aria-hidden','true');document.getElementById('image-modal-img').src='';document.getElementById('image-modal-img').alt='';document.getElementById('image-modal-caption').textContent='';">&times;</button>
+    <div class="image-modal-frame">
+      <img id="image-modal-img" src="" alt="">
+    </div>
+    <div id="image-modal-caption" class="image-modal-caption"></div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-config.js"></script>
+<script src="nanda_campus_food_map_v3.js" charset="utf-8"></script>
+</body>
+</html>

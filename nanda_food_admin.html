@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nanda Food Admin</title>
+<link rel="stylesheet" href="nanda_food_admin.css">
+</head>
+<body>
+<div class="admin-app">
+  <header class="topbar">
+    <div>
+      <div class="eyebrow">Supabase Admin</div>
+      <h1>Nanda food map admin</h1>
+      <p>Add restaurants, mark visits, and upload photos from your phone.</p>
+    </div>
+    <div class="topbar-actions">
+      <a class="ghost-btn" href="nanda_campus_food_map_v3.html">Open map</a>
+    </div>
+  </header>
+
+  <div id="status-banner" class="status-banner info">Checking Supabase setup…</div>
+
+  <section id="login-screen" class="login-screen">
+    <div class="auth-card login-card">
+      <div>
+        <div class="section-label">Admin sign-in</div>
+        <p class="panel-copy">Use a Supabase email/password user. Public visitors can still view the map, but only signed-in users can change restaurant data.</p>
+      </div>
+      <form id="login-form" class="auth-form">
+        <label>
+          <span>Email</span>
+          <input id="email-input" type="email" autocomplete="username" placeholder="you@example.com" required>
+        </label>
+        <label>
+          <span>Password</span>
+          <input id="password-input" type="password" autocomplete="current-password" placeholder="Password" required>
+        </label>
+        <div class="auth-actions">
+          <button id="login-btn" class="primary-btn" type="submit">Sign in</button>
+        </div>
+      </form>
+      <div id="auth-state" class="auth-state">Not signed in.</div>
+    </div>
+  </section>
+
+  <section id="admin-screen" class="admin-screen hidden">
+    <section class="auth-panel">
+      <div class="auth-card">
+        <div>
+          <div class="section-label">Admin session</div>
+          <p class="panel-copy">You are signed in. Use the controls below to manage restaurants, visit records, and photo entries.</p>
+        </div>
+        <div id="auth-state-panel" class="auth-state">Signed out.</div>
+        <div class="auth-actions">
+          <button id="reload-btn" class="ghost-btn" type="button">Reload data</button>
+          <button id="logout-btn" class="ghost-btn" type="button">Sign out</button>
+        </div>
+      </div>
+
+      <div class="auth-card">
+      <div class="section-label">Quick actions</div>
+      <div class="quick-actions">
+        <button id="new-restaurant-btn" class="ghost-btn" type="button">New restaurant</button>
+        <button id="import-json-btn" class="primary-btn" type="button">Import current restaurants.json</button>
+      </div>
+      <p class="panel-copy">Use the import button once after your Supabase tables are ready if you want to move the current local dataset into the database.</p>
+      </div>
+    </section>
+
+    <main class="admin-shell">
+      <aside class="list-panel">
+        <div class="list-header">
+          <div>
+            <div class="section-label">Restaurants</div>
+            <strong id="restaurant-count">0 loaded</strong>
+          </div>
+          <input id="search-input" type="search" placeholder="Search restaurants">
+        </div>
+        <div id="restaurant-list" class="restaurant-list"></div>
+      </aside>
+
+      <section class="editor-panel">
+        <form id="restaurant-form" class="editor-card">
+          <div class="card-head">
+            <div>
+              <div class="section-label">Restaurant details</div>
+              <h2 id="editor-title">New restaurant</h2>
+            </div>
+            <button id="delete-restaurant-btn" class="danger-btn" type="button">Delete</button>
+          </div>
+
+          <div class="field-grid two-col">
+            <label>
+              <span>English name</span>
+              <input name="en" type="text" placeholder="Leo European Breakfast (NTHU)">
+            </label>
+            <label>
+              <span>Local name</span>
+              <input name="name" type="text" placeholder="里歐歐式早餐-新竹清華店" required>
+            </label>
+            <label>
+              <span>Latitude</span>
+              <input name="lat" type="number" step="0.0000001" required>
+            </label>
+            <label>
+              <span>Longitude</span>
+              <input name="lng" type="number" step="0.0000001" required>
+            </label>
+            <label>
+              <span>Google Maps URL</span>
+              <input name="url" type="url" placeholder="https://maps.app.goo.gl/...">
+            </label>
+            <label>
+              <span>Sort order</span>
+              <input name="sortOrder" type="number" step="1" value="0">
+            </label>
+          </div>
+
+          <label>
+            <span>Description</span>
+            <textarea name="desc" rows="4" placeholder="Short description for the popup and detail card"></textarea>
+          </label>
+
+          <div>
+            <span class="field-label">Meal categories</span>
+            <div class="checkbox-row">
+              <label class="check-chip"><input type="checkbox" name="cat" value="breakfast"><span>Breakfast</span></label>
+              <label class="check-chip"><input type="checkbox" name="cat" value="brunch"><span>Brunch</span></label>
+              <label class="check-chip"><input type="checkbox" name="cat" value="lunch"><span>Lunch</span></label>
+              <label class="check-chip"><input type="checkbox" name="cat" value="dinner"><span>Dinner</span></label>
+              <label class="check-chip"><input type="checkbox" name="cat" value="hotpot"><span>Hotpot / BBQ</span></label>
+            </div>
+          </div>
+
+          <div class="field-grid two-col">
+            <label>
+              <span>Place type</span>
+              <select name="group">
+                <option value="recommended">Recommended</option>
+                <option value="new">New</option>
+              </select>
+            </label>
+            <label class="toggle-line">
+              <span>Visited</span>
+              <input name="visited" type="checkbox">
+            </label>
+            <label>
+              <span>Visited date</span>
+              <input name="visitedDate" type="date">
+            </label>
+          </div>
+
+          <div class="form-actions">
+            <button id="save-restaurant-btn" class="primary-btn" type="submit">Save restaurant</button>
+            <button id="reset-form-btn" class="ghost-btn" type="button">Clear form</button>
+          </div>
+        </form>
+
+        <section class="editor-card">
+          <div class="card-head">
+            <div>
+              <div class="section-label">Photos</div>
+              <h2>Manage selected restaurant photos</h2>
+            </div>
+          </div>
+
+          <div id="photo-empty" class="empty-note">Save the restaurant first, then add photos.</div>
+
+          <div id="photo-manager" class="photo-manager">
+            <div id="photo-list" class="photo-list"></div>
+
+            <form id="upload-photo-form" class="photo-form">
+              <div class="section-label">Upload from your phone</div>
+              <label>
+                <span>Photo file</span>
+                <input id="photo-file-input" type="file" accept="image/*">
+              </label>
+              <label>
+                <span>Caption</span>
+                <input id="photo-caption-input" type="text" placeholder="Front sign">
+              </label>
+              <label>
+                <span>Sort order</span>
+                <input id="photo-sort-input" type="number" step="1" value="0">
+              </label>
+              <button id="upload-photo-btn" class="primary-btn" type="submit">Upload photo</button>
+            </form>
+
+            <form id="url-photo-form" class="photo-form">
+              <div class="section-label">Or add a photo URL</div>
+              <label>
+                <span>Image URL</span>
+                <input id="photo-url-input" type="url" placeholder="https://...">
+              </label>
+              <label>
+                <span>Caption</span>
+                <input id="photo-url-caption-input" type="text" placeholder="Dish photo">
+              </label>
+              <label>
+                <span>Sort order</span>
+                <input id="photo-url-sort-input" type="number" step="1" value="0">
+              </label>
+              <button id="add-photo-url-btn" class="ghost-btn" type="submit">Add photo URL</button>
+            </form>
+          </div>
+        </section>
+      </section>
+    </main>
+  </section>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-config.js"></script>
+<script src="nanda_food_admin.js"></script>
+</body>
+</html>
