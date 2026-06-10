@@ -179,6 +179,21 @@ label span,
   font-weight:700;
 }
 
+.field-inline-actions{
+  display:grid;
+  gap:8px;
+}
+
+.field-inline-actions .ghost-btn{
+  justify-self:start;
+}
+
+.field-help{
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.4;
+}
+
 input[type="text"],
 input[type="email"],
 input[type="password"],

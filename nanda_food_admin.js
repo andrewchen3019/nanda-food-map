@@ -16,6 +16,7 @@ const refs = {
   restaurantList:document.getElementById("restaurant-list"),
   toggleRestaurantListBtn:document.getElementById("toggle-restaurant-list-btn"),
   showMoreRestaurantsBtn:document.getElementById("show-more-restaurants-btn"),
+  extractCoordinatesBtn:document.getElementById("extract-coordinates-btn"),
   restaurantForm:document.getElementById("restaurant-form"),
   editorTitle:document.getElementById("editor-title"),
   deleteRestaurantBtn:document.getElementById("delete-restaurant-btn"),
@@ -66,6 +67,7 @@ refs.searchInput.addEventListener("input",event => {
 });
 refs.toggleRestaurantListBtn.addEventListener("click",toggleRestaurantList);
 refs.showMoreRestaurantsBtn.addEventListener("click",showMoreRestaurants);
+refs.extractCoordinatesBtn.addEventListener("click",handleExtractCoordinates);
 refs.restaurantForm.addEventListener("submit",saveRestaurant);
 refs.deleteRestaurantBtn.addEventListener("click",deleteRestaurant);
 refs.resetFormBtn.addEventListener("click",() => selectRestaurant(null));
@@ -353,6 +355,23 @@ function readRestaurantForm(){
     visitedDate:refs.restaurantForm.elements.visitedDate.value,
     cat:categories
   };
+}
+
+function handleExtractCoordinates(){
+  const mapUrl = refs.restaurantForm.elements.url.value.trim();
+  if(!mapUrl){
+    setBanner("Paste a Google Maps URL first.","warning");
+    return;
+  }
+
+  try{
+    const {lat,lng} = window.NandaFoodSupabase.extractCoordinatesFromMapUrl(mapUrl);
+    refs.restaurantForm.elements.lat.value = formatCoordinateForInput(lat);
+    refs.restaurantForm.elements.lng.value = formatCoordinateForInput(lng);
+    setBanner("Coordinates filled from the map link.","success");
+  }catch(error){
+    setBanner(error.message || "Could not extract coordinates from that link.","warning");
+  }
 }
 
 async function loadRestaurants(showToast = true){
@@ -746,6 +765,12 @@ function extractStoragePath(src){
   }catch{
     return null;
   }
+}
+
+function formatCoordinateForInput(value){
+  return Number.isFinite(Number(value))
+    ? Number(value).toFixed(10).replace(/\.?0+$/,"")
+    : "";
 }
 
 function escapeHtml(value){

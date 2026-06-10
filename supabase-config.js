@@ -104,6 +104,74 @@
       : "";
   }
 
+  function extractCoordinatesFromMapUrl(rawUrl){
+    const trimmed = String(rawUrl || "").trim();
+    if(!trimmed){
+      throw new Error("Paste a Google Maps URL first.");
+    }
+
+    let parsedUrl;
+    try{
+      parsedUrl = new URL(trimmed);
+    }catch{
+      throw new Error("The map link is not a valid URL.");
+    }
+
+    const hostname = parsedUrl.hostname.toLowerCase();
+    if(hostname === "maps.app.goo.gl"){
+      throw new Error("Short maps.app.goo.gl links do not include coordinates directly. Open the short link, then paste the full Google Maps URL.");
+    }
+
+    const searchParamCandidates = [
+      parsedUrl.searchParams.get("q"),
+      parsedUrl.searchParams.get("query"),
+      parsedUrl.searchParams.get("ll"),
+      parsedUrl.searchParams.get("center"),
+      parsedUrl.searchParams.get("destination")
+    ].filter(Boolean);
+
+    for(const candidate of searchParamCandidates){
+      const pair = extractCoordinatePair(candidate);
+      if(pair) return pair;
+    }
+
+    const atMatch = decodedValue(parsedUrl.pathname).match(/@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);
+    if(atMatch){
+      return {
+        lat:parseCoordinate(atMatch[1],"Latitude",-90,90),
+        lng:parseCoordinate(atMatch[2],"Longitude",-180,180)
+      };
+    }
+
+    const dataMatch = decodedValue(`${parsedUrl.pathname}${parsedUrl.search}${parsedUrl.hash}`).match(/!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/);
+    if(dataMatch){
+      return {
+        lat:parseCoordinate(dataMatch[1],"Latitude",-90,90),
+        lng:parseCoordinate(dataMatch[2],"Longitude",-180,180)
+      };
+    }
+
+    throw new Error("Could not find latitude and longitude in that Google Maps URL.");
+  }
+
+  function extractCoordinatePair(value){
+    const text = decodedValue(value);
+    const pairMatch = text.match(/(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)/);
+    if(!pairMatch) return null;
+    return {
+      lat:parseCoordinate(pairMatch[1],"Latitude",-90,90),
+      lng:parseCoordinate(pairMatch[2],"Longitude",-180,180)
+    };
+  }
+
+  function decodedValue(value){
+    try{
+      return decodeURIComponent(String(value || ""));
+    }catch{
+      return String(value || "");
+    }
+  }
+
   async function fetchRestaurants(client){
     const {data,error} = await client
       .from(TABLES.restaurants)
@@ -153,6 +221,7 @@
     fetchRestaurants,
     normalizeRestaurantRows,
     parseCoordinate,
+    extractCoordinatesFromMapUrl,
     toRestaurantPayload,
     makeMatchKey
   };
