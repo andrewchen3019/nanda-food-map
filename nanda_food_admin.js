@@ -1,5 +1,6 @@
 const refs = {
   banner:document.getElementById("status-banner"),
+  toastStack:document.getElementById("toast-stack"),
   loginScreen:document.getElementById("login-screen"),
   adminScreen:document.getElementById("admin-screen"),
   loginForm:document.getElementById("login-form"),
@@ -10,7 +11,6 @@ const refs = {
   authStatePanel:document.getElementById("auth-state-panel"),
   reloadBtn:document.getElementById("reload-btn"),
   newRestaurantBtn:document.getElementById("new-restaurant-btn"),
-  importJsonBtn:document.getElementById("import-json-btn"),
   searchInput:document.getElementById("search-input"),
   restaurantCount:document.getElementById("restaurant-count"),
   restaurantList:document.getElementById("restaurant-list"),
@@ -20,7 +20,6 @@ const refs = {
   restaurantForm:document.getElementById("restaurant-form"),
   editorTitle:document.getElementById("editor-title"),
   deleteRestaurantBtn:document.getElementById("delete-restaurant-btn"),
-  resetFormBtn:document.getElementById("reset-form-btn"),
   photoEmpty:document.getElementById("photo-empty"),
   photoManager:document.getElementById("photo-manager"),
   photoList:document.getElementById("photo-list"),
@@ -46,7 +45,8 @@ const state = {
   busy:false,
   mobileLayout:MOBILE_LIST_MEDIA.matches,
   mobileListOpen:!MOBILE_LIST_MEDIA.matches,
-  visibleRestaurantCount:MOBILE_LIST_MEDIA.matches ? MOBILE_LIST_BATCH_SIZE : Number.POSITIVE_INFINITY
+  visibleRestaurantCount:MOBILE_LIST_MEDIA.matches ? MOBILE_LIST_BATCH_SIZE : Number.POSITIVE_INFINITY,
+  toastCounter:0
 };
 
 init();
@@ -56,7 +56,6 @@ refs.loginForm.addEventListener("submit",handleLogin);
 refs.logoutBtn.addEventListener("click",handleLogout);
 refs.reloadBtn.addEventListener("click",() => loadRestaurants(true));
 refs.newRestaurantBtn.addEventListener("click",() => selectRestaurant(null));
-refs.importJsonBtn.addEventListener("click",importFromJsonSnapshot);
 refs.searchInput.addEventListener("input",event => {
   state.search = event.target.value.trim().toLowerCase();
   if(state.mobileLayout){
@@ -70,7 +69,6 @@ refs.showMoreRestaurantsBtn.addEventListener("click",showMoreRestaurants);
 refs.extractCoordinatesBtn.addEventListener("click",handleExtractCoordinates);
 refs.restaurantForm.addEventListener("submit",saveRestaurant);
 refs.deleteRestaurantBtn.addEventListener("click",deleteRestaurant);
-refs.resetFormBtn.addEventListener("click",() => selectRestaurant(null));
 refs.uploadPhotoForm.addEventListener("submit",uploadPhotoFile);
 refs.urlPhotoForm.addEventListener("submit",addPhotoUrl);
 refs.photoList.addEventListener("click",handlePhotoListClick);
@@ -145,7 +143,6 @@ function updateActionAvailability(){
   const signedIn = Boolean(state.session);
   const hasSelection = Boolean(state.selectedId);
   refs.logoutBtn.disabled = !signedIn;
-  refs.importJsonBtn.disabled = !signedIn || state.busy;
   refs.deleteRestaurantBtn.disabled = !signedIn || !hasSelection || state.busy;
   refs.uploadPhotoForm.querySelectorAll("input,button").forEach(node => {
     node.disabled = !signedIn || !hasSelection || state.busy;
@@ -154,13 +151,11 @@ function updateActionAvailability(){
     node.disabled = !signedIn || !hasSelection || state.busy;
   });
   refs.restaurantForm.querySelectorAll("input,textarea,select,button").forEach(node => {
-    if(node === refs.resetFormBtn) return;
     if(node === refs.deleteRestaurantBtn) return;
     node.disabled = !signedIn || state.busy;
   });
-  refs.resetFormBtn.disabled = state.busy;
   refs.reloadBtn.disabled = state.busy;
-  refs.newRestaurantBtn.disabled = state.busy;
+  refs.newRestaurantBtn.disabled = !signedIn || state.busy;
 }
 
 function setDisabledState(disabled){
@@ -177,6 +172,17 @@ function setBusy(busy){
 function setBanner(text,tone){
   refs.banner.textContent = text;
   refs.banner.className = `status-banner ${tone}`;
+}
+
+function showToast(text,tone = "success",duration = 2600){
+  const toast = document.createElement("div");
+  toast.className = `toast ${tone}`;
+  toast.textContent = text;
+  toast.dataset.toastId = String(state.toastCounter += 1);
+  refs.toastStack.appendChild(toast);
+  window.setTimeout(() => {
+    toast.remove();
+  },duration);
 }
 
 function setupResponsiveList(){
@@ -361,6 +367,7 @@ function handleExtractCoordinates(){
   const mapUrl = refs.restaurantForm.elements.url.value.trim();
   if(!mapUrl){
     setBanner("Paste a Google Maps URL first.","warning");
+    showToast("Paste a Google Maps URL first.","warning");
     return;
   }
 
@@ -369,8 +376,10 @@ function handleExtractCoordinates(){
     refs.restaurantForm.elements.lat.value = formatCoordinateForInput(lat);
     refs.restaurantForm.elements.lng.value = formatCoordinateForInput(lng);
     setBanner("Coordinates filled from the map link.","success");
+    showToast("Coordinates filled from the map link.");
   }catch(error){
     setBanner(error.message || "Could not extract coordinates from that link.","warning");
+    showToast(error.message || "Could not extract coordinates from that link.","warning");
   }
 }
 
@@ -433,16 +442,19 @@ async function saveRestaurant(event){
   event.preventDefault();
   if(!state.session){
     setBanner("Sign in before saving restaurant changes.","warning");
+    showToast("Sign in before saving restaurant changes.","warning");
     return;
   }
 
   const formState = readRestaurantForm();
   if(!formState.name && !formState.en){
     setBanner("Add at least one restaurant name before saving.","warning");
+    showToast("Add at least one restaurant name before saving.","warning");
     return;
   }
   if(!formState.cat.length){
     setBanner("Choose at least one meal category.","warning");
+    showToast("Choose at least one meal category.","warning");
     return;
   }
 
@@ -460,6 +472,7 @@ async function saveRestaurant(event){
       if(error) throw error;
       result = data;
       setBanner("Restaurant updated.","success");
+      showToast("Restaurant saved.");
     }else{
       const {data,error} = await state.client
         .from(window.NandaFoodSupabase.TABLES.restaurants)
@@ -470,12 +483,14 @@ async function saveRestaurant(event){
       result = data;
       state.selectedId = result.id;
       setBanner("Restaurant created.","success");
+      showToast("Restaurant created.");
     }
     await loadRestaurants(false);
     selectRestaurant(result.id);
   }catch(error){
     console.error(error);
     setBanner(error.message || "Saving failed.","error");
+    showToast(error.message || "Saving failed.","error",3200);
   }finally{
     setBusy(false);
   }
@@ -508,9 +523,11 @@ async function deleteRestaurant(){
     state.selectedId = null;
     await loadRestaurants(false);
     setBanner("Restaurant deleted.","success");
+    showToast("Restaurant deleted.");
   }catch(error){
     console.error(error);
     setBanner(error.message || "Delete failed.","error");
+    showToast(error.message || "Delete failed.","error",3200);
   }finally{
     setBusy(false);
   }
@@ -545,9 +562,11 @@ async function savePhotoMetadata(photoId){
     if(error) throw error;
     await loadRestaurants(false);
     setBanner("Photo details updated.","success");
+    showToast("Photo saved.");
   }catch(error){
     console.error(error);
     setBanner(error.message || "Photo update failed.","error");
+    showToast(error.message || "Photo update failed.","error",3200);
   }finally{
     setBusy(false);
   }
@@ -574,9 +593,11 @@ async function deletePhoto(photoId){
     }
     await loadRestaurants(false);
     setBanner("Photo deleted.","success");
+    showToast("Photo deleted.");
   }catch(error){
     console.error(error);
     setBanner(error.message || "Photo delete failed.","error");
+    showToast(error.message || "Photo delete failed.","error",3200);
   }finally{
     setBusy(false);
   }
@@ -586,11 +607,13 @@ async function uploadPhotoFile(event){
   event.preventDefault();
   if(!state.session || !state.selectedId){
     setBanner("Save and select a restaurant before uploading photos.","warning");
+    showToast("Save and select a restaurant before uploading photos.","warning");
     return;
   }
   const file = refs.photoFileInput.files[0];
   if(!file){
     setBanner("Choose a photo file first.","warning");
+    showToast("Choose a photo file first.","warning");
     return;
   }
 
@@ -623,9 +646,11 @@ async function uploadPhotoFile(event){
     refs.photoSortInput.value = 0;
     await loadRestaurants(false);
     setBanner("Photo uploaded.","success");
+    showToast("Photo uploaded.");
   }catch(error){
     console.error(error);
     setBanner(error.message || "Photo upload failed.","error");
+    showToast(error.message || "Photo upload failed.","error",3200);
   }finally{
     setBusy(false);
   }
@@ -635,11 +660,13 @@ async function addPhotoUrl(event){
   event.preventDefault();
   if(!state.session || !state.selectedId){
     setBanner("Save and select a restaurant before adding photo URLs.","warning");
+    showToast("Save and select a restaurant before adding photo URLs.","warning");
     return;
   }
   const src = refs.photoUrlInput.value.trim();
   if(!src){
     setBanner("Enter an image URL first.","warning");
+    showToast("Enter an image URL first.","warning");
     return;
   }
 
@@ -658,97 +685,11 @@ async function addPhotoUrl(event){
     refs.photoUrlSortInput.value = 0;
     await loadRestaurants(false);
     setBanner("Photo URL added.","success");
+    showToast("Photo URL added.");
   }catch(error){
     console.error(error);
     setBanner(error.message || "Adding the photo URL failed.","error");
-  }finally{
-    setBusy(false);
-  }
-}
-
-async function importFromJsonSnapshot(){
-  if(!state.session){
-    setBanner("Sign in before importing restaurants.json.","warning");
-    return;
-  }
-
-  setBusy(true);
-  try{
-    setBanner("Importing restaurants.json into Supabase…","info");
-    const response = await fetch("restaurants.json",{cache:"no-store"});
-    if(!response.ok){
-      throw new Error(`Could not load restaurants.json (${response.status}).`);
-    }
-    const snapshot = await response.json();
-    const currentByKey = new Map(state.restaurants.map(place => [window.NandaFoodSupabase.makeMatchKey(place), place]));
-
-    let inserted = 0;
-    let updated = 0;
-    let photosAdded = 0;
-
-    for(let index = 0; index < snapshot.length; index += 1){
-      const source = snapshot[index];
-      const normalizedSource = {
-        name:source.name || source.en || "",
-        en:source.en || source.name || "",
-        lat:source.lat,
-        lng:source.lng,
-        url:source.url || "",
-        desc:source.desc || "",
-        group:source.group || "recommended",
-        visited:Boolean(source.visited),
-        visitedDate:source.visitedDate || "",
-        cat:Array.isArray(source.cat) ? source.cat : [],
-        sortOrder:index
-      };
-
-      const payload = window.NandaFoodSupabase.toRestaurantPayload(normalizedSource);
-      const matchKey = window.NandaFoodSupabase.makeMatchKey(normalizedSource);
-      const existing = currentByKey.get(matchKey);
-      let restaurantId = existing?.id || null;
-      let existingPhotos = new Set((existing?.photos || []).map(photo => photo.src));
-
-      if(restaurantId){
-        const {error} = await state.client
-          .from(window.NandaFoodSupabase.TABLES.restaurants)
-          .update(payload)
-          .eq("id",restaurantId);
-        if(error) throw error;
-        updated += 1;
-      }else{
-        const {data,error} = await state.client
-          .from(window.NandaFoodSupabase.TABLES.restaurants)
-          .insert(payload)
-          .select("id")
-          .single();
-        if(error) throw error;
-        restaurantId = data.id;
-        inserted += 1;
-      }
-
-      const photos = Array.isArray(source.photos) ? source.photos.filter(photo => photo && photo.src) : [];
-      for(let photoIndex = 0; photoIndex < photos.length; photoIndex += 1){
-        const photo = photos[photoIndex];
-        if(existingPhotos.has(photo.src)) continue;
-        const {error} = await state.client
-          .from(window.NandaFoodSupabase.TABLES.photos)
-          .insert({
-            restaurant_id:restaurantId,
-            src:photo.src,
-            caption:photo.caption || "",
-            sort_order:photoIndex
-          });
-        if(error) throw error;
-        existingPhotos.add(photo.src);
-        photosAdded += 1;
-      }
-    }
-
-    await loadRestaurants(false);
-    setBanner(`Import finished: ${inserted} inserted, ${updated} updated, ${photosAdded} photos added.`,"success");
-  }catch(error){
-    console.error(error);
-    setBanner(error.message || "Import failed.","error");
+    showToast(error.message || "Adding the photo URL failed.","error",3200);
   }finally{
     setBusy(false);
   }

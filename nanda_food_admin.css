@@ -68,7 +68,6 @@ select{
 }
 
 .topbar-actions,
-.quick-actions,
 .auth-actions,
 .form-actions{
   display:flex;
@@ -103,6 +102,44 @@ select{
   background:#ffe8e4;
 }
 
+.toast-stack{
+  position:fixed;
+  left:50%;
+  bottom:20px;
+  z-index:40;
+  width:min(calc(100vw - 28px),420px);
+  display:grid;
+  gap:10px;
+  transform:translateX(-50%);
+  pointer-events:none;
+}
+
+.toast{
+  padding:12px 14px;
+  border-radius:18px;
+  border:1px solid var(--line);
+  background:rgba(255,253,250,.96);
+  box-shadow:0 18px 34px rgba(44,51,45,.16);
+  color:var(--text);
+  font-weight:700;
+  line-height:1.4;
+}
+
+.toast.success{
+  background:#e5f4ed;
+  color:#17583c;
+}
+
+.toast.warning{
+  background:#fff4db;
+  color:var(--warning);
+}
+
+.toast.error{
+  background:#ffe8e4;
+  color:var(--danger);
+}
+
 .auth-panel,
 .login-screen,
 .admin-shell{
@@ -118,7 +155,7 @@ select{
 }
 
 .auth-panel{
-  grid-template-columns:1.3fr 1fr;
+  grid-template-columns:minmax(0,1fr);
 }
 
 .admin-screen{
@@ -217,7 +254,8 @@ textarea{
 
 .primary-btn,
 .ghost-btn,
-.danger-btn{
+.danger-btn,
+.icon-btn{
   appearance:none;
   border:none;
   border-radius:999px;
@@ -230,7 +268,8 @@ textarea{
 
 .primary-btn:hover,
 .ghost-btn:hover,
-.danger-btn:hover{
+.danger-btn:hover,
+.icon-btn:hover{
   transform:translateY(-1px);
 }
 
@@ -251,9 +290,23 @@ textarea{
   color:var(--danger);
 }
 
+.icon-btn{
+  width:44px;
+  height:44px;
+  padding:0;
+  display:inline-grid;
+  place-items:center;
+  background:#f6f1e6;
+  color:var(--text);
+  border:1px solid rgba(150,128,97,.22);
+  font-size:28px;
+  line-height:1;
+}
+
 .primary-btn:disabled,
 .ghost-btn:disabled,
-.danger-btn:disabled{
+.danger-btn:disabled,
+.icon-btn:disabled{
   opacity:.45;
   cursor:not-allowed;
   transform:none;
@@ -337,7 +390,7 @@ textarea{
 
 .editor-panel{
   display:grid;
-  gap:18px;
+  gap:14px;
 }
 
 .card-head{
@@ -351,6 +404,12 @@ textarea{
 .card-head h2{
   margin:4px 0 0;
   font-size:24px;
+}
+
+.card-head-actions{
+  display:flex;
+  align-items:center;
+  gap:10px;
 }
 
 .field-grid{
@@ -457,7 +516,7 @@ textarea{
 
 @media (max-width: 640px){
   .admin-app{
-    padding:14px;
+    padding:12px;
   }
 
   .topbar{
@@ -466,15 +525,39 @@ textarea{
 
   .card-head{
     flex-direction:column;
+    align-items:stretch;
   }
 
   .list-panel{
     gap:10px;
   }
 
+  .card-head-actions,
+  .form-actions,
+  .auth-actions{
+    width:100%;
+  }
+
+  .card-head-actions .danger-btn,
+  .form-actions .primary-btn,
+  .form-actions .ghost-btn,
+  .auth-actions .ghost-btn{
+    flex:1;
+    justify-content:center;
+  }
+
+  .card-head-actions .icon-btn{
+    flex:0 0 44px;
+  }
+
   .restaurant-list{
     max-height:min(52vh,360px);
     padding-right:0;
+  }
+
+  .toast-stack{
+    bottom:max(14px,env(safe-area-inset-bottom));
+    width:min(calc(100vw - 20px),420px);
   }
 }
 

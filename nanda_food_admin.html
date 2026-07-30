@@ -20,6 +20,7 @@
   </header>
 
   <div id="status-banner" class="status-banner info">Checking Supabase setup…</div>
+  <div id="toast-stack" class="toast-stack" aria-live="polite" aria-atomic="true"></div>
 
   <section id="login-screen" class="login-screen">
     <div class="auth-card login-card">
@@ -57,15 +58,6 @@
           <button id="logout-btn" class="ghost-btn" type="button">Sign out</button>
         </div>
       </div>
-
-      <div class="auth-card">
-      <div class="section-label">Quick actions</div>
-      <div class="quick-actions">
-        <button id="new-restaurant-btn" class="ghost-btn" type="button">New restaurant</button>
-        <button id="import-json-btn" class="primary-btn" type="button">Import current restaurants.json</button>
-      </div>
-      <p class="panel-copy">Use the import button once after your Supabase tables are ready if you want to move the current local dataset into the database.</p>
-      </div>
     </section>
 
     <main class="admin-shell">
@@ -91,7 +83,10 @@
               <div class="section-label">Restaurant details</div>
               <h2 id="editor-title">New restaurant</h2>
             </div>
-            <button id="delete-restaurant-btn" class="danger-btn" type="button">Delete</button>
+            <div class="card-head-actions">
+              <button id="new-restaurant-btn" class="icon-btn" type="button" aria-label="Create new restaurant">+</button>
+              <button id="delete-restaurant-btn" class="danger-btn" type="button">Delete</button>
+            </div>
           </div>
 
           <div class="field-grid two-col">
@@ -161,7 +156,6 @@
 
           <div class="form-actions">
             <button id="save-restaurant-btn" class="primary-btn" type="submit">Save restaurant</button>
-            <button id="reset-form-btn" class="ghost-btn" type="button">Clear form</button>
           </div>
         </form>
 
